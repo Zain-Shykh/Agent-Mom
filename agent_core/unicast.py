@@ -29,6 +29,11 @@ class UnicastTransport:
         self._server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._server_sock.bind((self.host, self.port))
         self._server_sock.listen()
+        # A blocking accept() on another thread does not reliably unblock when
+        # this socket is close()'d from stop() (a well-known Linux threading
+        # pitfall), so the accept loop polls _stop_event via a timeout instead
+        # of relying on close() to interrupt it.
+        self._server_sock.settimeout(0.5)
 
         self._accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
         self._accept_thread.start()
@@ -49,6 +54,8 @@ class UnicastTransport:
         while not self._stop_event.is_set():
             try:
                 conn, addr = self._server_sock.accept()
+            except socket.timeout:
+                continue  # no connection within the poll interval — check _stop_event again
             except OSError:
                 # Listener socket was closed by stop() — exit the loop.
                 break

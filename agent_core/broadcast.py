@@ -38,6 +38,10 @@ class BroadcastTransport:
         self._recv_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._recv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._recv_sock.bind(("", self.port))
+        # A blocking recvfrom() on another thread does not reliably unblock when
+        # this socket is close()'d from stop() (a well-known Linux threading
+        # pitfall), so the recv loop polls _stop_event via a timeout instead.
+        self._recv_sock.settimeout(0.5)
 
         self._recv_thread = threading.Thread(target=self._recv_loop, daemon=True)
         self._recv_thread.start()
@@ -66,6 +70,8 @@ class BroadcastTransport:
         while not self._stop_event.is_set():
             try:
                 data, _addr = self._recv_sock.recvfrom(_RECV_BUF_SIZE)
+            except socket.timeout:
+                continue  # no datagram within the poll interval — check _stop_event again
             except OSError:
                 # Listener socket was closed by stop() — exit the loop.
                 break

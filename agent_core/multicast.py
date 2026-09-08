@@ -40,6 +40,10 @@ class MulticastTransport:
 
         mreq = struct.pack("4sl", socket.inet_aton(addr), socket.INADDR_ANY)
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        # A blocking recvfrom() on another thread does not reliably unblock when
+        # this socket is close()'d from leave_group() (a well-known Linux
+        # threading pitfall), so the recv loop polls stop_event via a timeout.
+        sock.settimeout(0.5)
 
         stop_event = threading.Event()
         thread = threading.Thread(target=self._recv_loop, args=(sock, stop_event), daemon=True)
@@ -75,6 +79,8 @@ class MulticastTransport:
         while not stop_event.is_set():
             try:
                 data, _addr = sock.recvfrom(_RECV_BUF_SIZE)
+            except socket.timeout:
+                continue  # no datagram within the poll interval — check stop_event again
             except OSError:
                 # Socket was closed by leave_group() — exit the loop.
                 break
