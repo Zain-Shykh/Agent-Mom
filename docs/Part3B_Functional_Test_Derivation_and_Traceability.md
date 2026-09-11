@@ -163,9 +163,9 @@
 - **Test data:** any group address/port entered into two windows' Group panels; any message text
 - **Steps:** 1) In Window A and Window B, enter the same multicast address/port and click Join. 2) In Window A, select "multicast", enter the message, click Send. 3) Observe Window B's log panel.
 - **Expected result:** Window B's log panel shows the received message
-- **Actual result:** Confirmed — the recipient window's log panel showed a RECV line for the message sent from the sender window after both joined the same group address/port.
+- **Actual result:** Confirmed — the recipient window's log panel showed a RECV line for the message sent from the sender window after both joined the same group address/port. Note: the first send attempt used a mistyped address (one extra octet, `239.1.1.1.1:5000`) and failed with `getaddrinfo failed`; the address was corrected and the retried send succeeded as described. This is a user input error during manual execution, not an application defect — `230.x`/`239.x`-style addresses are otherwise handled correctly (see TC-09).
 - **Status:** **PASSED**
-- **Evidence:** Manually executed by the team on Windows 10 with Python 3.x; screenshot attached separately in `docs/evidence/`.
+- **Evidence:** Manually executed by the team on Windows 10 with Python 3.x; screenshot in `docs/evidence/part3b_tc13_multicast.png` (includes the initial mistyped-address error and the corrected retry).
 
 ### TC-14 — (System-level, manual) Conversation-architecture switch changes visible behaviour
 - **Level/category:** System-level, manual execution required
@@ -185,9 +185,9 @@
 - **Test data:** one message per mode
 - **Steps:** From one window's Send panel, send one message each as unicast (to a specific window), multicast (to a group two windows joined), and broadcast. Observe all windows' log panels after each send.
 - **Expected result:** unicast reaches only the targeted window; multicast reaches only group members; broadcast reaches all
-- **Actual result:** Confirmed — unicast arrived only at the targeted window, multicast arrived only at group members, and broadcast arrived at both other windows.
-- **Status:** **PASSED**
-- **Evidence:** Manually executed by the team; screenshots attached separately in `docs/evidence/`.
+- **Actual result:** Confirmed — unicast arrived only at the targeted window, multicast arrived only at group members, and broadcast arrived at both other windows. During execution, sending with a blank Target field (before it was filled in) produced three `ERROR: send failed for [...] -> : invalid literal for int() with base 10: ''` lines rather than a graceful validation message — an additional, previously undocumented input-validation gap distinct from TC-07/TC-08 (empty target vs. invalid TTL/address), observed directly in the evidence screenshot.
+- **Status:** **PASSED** (the routing behaviour itself matched expectations; the blank-target crash is recorded as a separate observation, not a failure of this test's stated objective)
+- **Evidence:** Manually executed by the team; screenshot in `docs/evidence/part3b_tc15_mode_routing.png` (includes the blank-target error lines on A2)
 
 ---
 
@@ -220,3 +220,5 @@
 ## Summary
 
 15 test cases were executed in total: 12 at the `agent_core` layer (automated) and 3 at the GUI layer (manual, system-level). 12 cases PASSED and 3 cases genuinely FAILED (TC-04, TC-07, TC-08), each tied to a documented gap in `KNOWN_LIMITATIONS.md`. The 3 FAILED cases are carried forward as defect candidates in Part 4.
+
+One additional defect was observed as a side effect during TC-15's manual execution rather than through a dedicated test case: sending with a blank Target field raises an unhandled `ValueError` (`invalid literal for int() with base 10: ''`) instead of a graceful validation message. This is a genuine, reproducible gap distinct from the TTL/address validation gaps in TC-07/TC-08, and is also a candidate for the Part 4 defect log.
