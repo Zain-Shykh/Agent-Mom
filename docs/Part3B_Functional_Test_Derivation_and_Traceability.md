@@ -103,7 +103,7 @@
 - **Expected result:** the app validates TTL client-side and shows a clear, graceful error (e.g. "TTL must be 1–255") without crashing
 - **Actual result:** TTL=999 → unhandled `OSError: [Errno 22] Invalid argument` raised straight out of `setsockopt()` — no graceful message, this would crash the GUI event loop if uncaught there. TTL=-1 → **worse** — no error at all, `setsockopt()` silently accepts it and the message is delivered normally, i.e. an invalid input is treated as valid.
 - **Status:** **FAILED**
-- **Evidence:** `tests/part3b_extra_tests.py::test_ttl_out_of_range_256_raises_unhandled_error` (confirms the TTL=999 crash); a separate manual probe with TTL=-1 confirmed `send()` raised no exception and the message was still delivered
+- **Evidence:** `tests/part3b_extra_tests.py::test_ttl_out_of_range_256_raises_unhandled_error` (confirms the TTL=999 crash); `tests/part3b_extra_tests.py::test_ttl_negative_silently_accepted_and_delivered` (confirms TTL=-1 raises no exception and the message is still delivered)
 
 ### TC-08 — Non-multicast address accepted without validation
 - **Level/category:** Invalid/error — **non-trivial, genuinely FAILED**
@@ -123,7 +123,7 @@
 - **Expected result:** both messages received, correctly attributed
 - **Actual result:** both `from-group-A` and `from-group-B` received correctly
 - **Status:** **PASSED**
-- **Evidence:** manual script execution against `agent_core`, event log captured
+- **Evidence:** `tests/part3b_extra_tests.py::test_multi_group_simultaneous_receive` — PASSED
 
 ### TC-10 — Broadcast delivery to all agents
 - **Level/category:** Normal
@@ -154,7 +154,7 @@
 - **Expected result:** decrypt failure is caught and surfaced as an `error` Event; the app does not crash
 - **Actual result:** exactly as expected — `received` event followed by `error: decrypt failed for message from N1`
 - **Status:** **PASSED**
-- **Evidence:** manual script execution against `agent_core`, event log captured
+- **Evidence:** `tests/part3b_extra_tests.py::test_undecryptable_message_handled_gracefully` — PASSED
 
 ### TC-13 — (System-level, manual) End-to-end multicast via the GUI
 - **Level/category:** System-level, manual execution required
