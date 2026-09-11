@@ -60,13 +60,18 @@ def test_ttl_out_of_range_256_raises_unhandled_error(agents):
         n1.send("multicast", f"{GROUP_ADDR}:{GROUP_PORT}", "ttl-over", ttl=999)
 
 
-# --- TC-07: invalid TTL, negative value ---
-def test_ttl_negative_raises_unhandled_error(agents):
+# --- TC-07: invalid TTL, negative value — documents that it is silently
+# accepted (no validation) rather than rejected, which is itself the defect.
+def test_ttl_negative_silently_accepted_and_delivered(agents):
     n1, n2 = agents
     n2.join_group(GROUP_ADDR, GROUP_PORT)
     time.sleep(0.2)
-    with pytest.raises(OSError):
-        n1.send("multicast", f"{GROUP_ADDR}:{GROUP_PORT}", "ttl-negative", ttl=-1)
+    # No exception should occur — this is the defect: invalid TTL is treated as valid.
+    n1.send("multicast", f"{GROUP_ADDR}:{GROUP_PORT}", "ttl-negative", ttl=-1)
+    time.sleep(0.3)
+    events = n2.poll_events()
+    assert any(e.kind == "received" and "ttl-negative" in e.detail for e in events), \
+        "expected the (invalid) negative-TTL message to still be delivered, confirming no validation exists"
 
 
 # --- TC-08: invalid multicast address (not in 224.0.0.0/4 multicast range) accepted with no validation ---
@@ -116,3 +121,39 @@ def test_leave_then_immediate_send_timing(agents):
     # Not asserted PASS/FAIL here on purpose — this test's *point* is to
     # measure and report the actual rate, used as evidence in the report,
     # not to enforce a pass.
+
+
+# --- TC-09: agent subscribed to 2+ groups receives from each independently ---
+def test_multi_group_simultaneous_receive(agents):
+    n1, n2 = agents
+    group_a = ("239.9.9.40", 7991)
+    group_b = ("239.9.9.41", 7992)
+    n2.join_group(*group_a)
+    n2.join_group(*group_b)
+    time.sleep(0.3)
+    n1.send("multicast", f"{group_a[0]}:{group_a[1]}", "from-group-A", ttl=1)
+    n1.send("multicast", f"{group_b[0]}:{group_b[1]}", "from-group-B", ttl=1)
+    time.sleep(0.3)
+    events = n2.poll_events()
+    assert any(e.kind == "received" and "from-group-A" in e.detail for e in events)
+    assert any(e.kind == "received" and "from-group-B" in e.detail for e in events)
+
+
+# --- TC-12: a message that cannot be decrypted (wrong key) is handled
+# gracefully — an error Event is queued, the app does not crash ---
+def test_undecryptable_message_handled_gracefully(agents):
+    from agent_core.crypto_service import CryptoService
+    from agent_core.message import Message
+    n1, n2 = agents
+    wrong_key_crypto = CryptoService(CryptoService.generate_key())  # NOT n2's key
+    bad_msg = Message(
+        type="unicast", sender_id="N1", sender_addr="127.0.0.1:" + str(UNICAST_PORTS[0]),
+        timestamp="2026-01-01T00:00:00Z", encrypted=True,
+        payload=wrong_key_crypto.encrypt("secret"),
+    )
+    n2._inbound_msgs.put(bad_msg)
+    time.sleep(0.3)
+    events = n2.poll_events()
+    assert any(e.kind == "error" and "decrypt" in e.detail for e in events), \
+        "expected a graceful decrypt-failure error Event, found none (possible unhandled crash instead)"
+
