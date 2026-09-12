@@ -1,6 +1,6 @@
 # Part 3(b) — Functional Test Derivation, Execution and Traceability
 
-**Scope tested:** the 7 FRs from `docs/Part1_Requirement_Scope_and_AI_Assumptions.md`, against the frozen baseline in `agent_core/` + `agent_gui/` (commit `bd231e1`).
+**Scope tested:** the 7 FRs from `docs/Part1_Requirement_Scope_and_AI_Assumptions.md`, against the frozen baseline in `agent_core/` + `agent_gui/` (application code frozen at commit `09403cc` — verified unchanged through every later commit, including this test/evidence work).
 
 **Execution method:** TC-01–TC-12 were executed against `agent_core/` directly (real sockets, real threads, no GUI) using `tests/part3b_extra_tests.py` and the existing `tests/smoke_test_core.py`, run with `pytest`. `agent_core/` has no `tkinter` dependency and is independently testable at this layer (confirmed in `KNOWN_LIMITATIONS.md`). TC-13–TC-15 are system-level tests and were executed manually against the running GUI (`main.py`), consistent with the assignment's requirement that system-level cases be executed by a person rather than automated.
 
@@ -198,18 +198,18 @@
 | R1 | COND-01 | TC-01 | PASSED | N/A |
 | R1 / NFR-Reliability | COND-02 | TC-02 | PASSED | N/A |
 | R2 | COND-03 | TC-03 | PASSED | N/A |
-| R2 | COND-04 | TC-04 | FAILED | To be logged in Part 4 (multicast leave/join timing) |
+| R2 | COND-04 | TC-04 | FAILED | BUG-01 (multicast leave/join timing) |
 | R3 | COND-05 | TC-05 | PASSED | N/A |
 | R3 | COND-06 | TC-06 | PASSED | N/A |
-| R3 | COND-07 | TC-07 | FAILED | To be logged in Part 4 (TTL validation missing/crashes) |
-| R3 | COND-08 | TC-08 | FAILED | To be logged in Part 4 (multicast address validation missing) |
+| R3 | COND-07 | TC-07 | FAILED | BUG-02 (TTL validation missing/crashes) |
+| R3 | COND-08 | TC-08 | FAILED | BUG-03 (multicast address validation missing) |
 | R3 | COND-09 | TC-09 | PASSED | N/A |
 | R4 | COND-10 | TC-10 | PASSED | N/A |
 | R5 | COND-11 | TC-11 | PASSED | N/A |
 | R5 / NFR-Security | COND-12 | TC-12 | PASSED | N/A |
 | R2 + R3 | COND-13 | TC-13 | PASSED | N/A |
 | R6 | COND-14 | TC-14 | PASSED | N/A |
-| R7 | COND-15 | TC-15 | PASSED | N/A |
+| R7 | COND-15 | TC-15 | PASSED | BUG-04 (blank Target field crash, observed as a side effect during this test) |
 
 **Category coverage check:**
 - Boundary cases (≥2 required): TC-05, TC-06 ✓ (TC-04 is also a timing-boundary case)

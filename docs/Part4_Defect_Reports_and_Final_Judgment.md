@@ -6,7 +6,7 @@
 
 ## BUG-01 — Multicast message received after leaving a group (intermittent)
 
-- **Environment/build:** Linux, commit `bd231e1`, `agent_core` layer (Python 3.12, `agent_core/multicast.py`)
+- **Environment/build:** Linux, commit `09403cc` (frozen application code), `agent_core` layer (Python 3.12, `agent_core/multicast.py`)
 - **Preconditions:** An agent has joined a multicast group
 - **Steps to reproduce:**
   1. Agent calls `leave_group(addr, port)` and the call returns
@@ -17,7 +17,7 @@
 - **Reproducibility:** Intermittent (timing/race-dependent — confirmed reproducible at least once, not reliably on every attempt)
 - **Severity:** Medium — violates a stated access-control requirement (3.2.2.6), but only in a narrow timing window immediately after leaving
 - **Priority:** Medium — not blocking normal use, but represents a real correctness gap in a security/access-relevant rule
-- **Evidence:** `KNOWN_LIMITATIONS.md` item 1; `tests/part3b_extra_tests.py::test_leave_then_immediate_send_timing`
+- **Evidence:** `KNOWN_LIMITATIONS.md` item 1; `tests/part3b_extra_tests.py::test_leave_then_immediate_send_timing`; Jira ticket KAN-4 description, `docs/evidence/part4_bug01_jira_detail.jpg`
 - **Related test case:** TC-04
 - **Status:** Open
 
@@ -25,7 +25,7 @@
 
 ## BUG-02 — Multicast TTL is not validated (crashes above range, silently accepts negative)
 
-- **Environment/build:** Linux, commit `bd231e1`, `agent_core` layer (`agent_core/multicast.py`, `MulticastTransport.send`)
+- **Environment/build:** Linux, commit `09403cc` (frozen application code), `agent_core` layer (`agent_core/multicast.py`, `MulticastTransport.send`)
 - **Preconditions:** An agent is a member of a multicast group
 - **Steps to reproduce (case A — over range):**
   1. Call `send("multicast", <group>, <payload>, ttl=999)`
@@ -38,7 +38,7 @@
 - **Reproducibility:** Always (100%, both cases)
 - **Severity:** High — case A is an unhandled crash reachable directly from user-entered GUI input (the TTL field takes free-text and is never range-checked before use); case B is a silent correctness gap
 - **Priority:** High — this is a crash triggerable by an ordinary user typo in the GUI's own TTL field, not an edge case requiring special conditions
-- **Evidence:** `KNOWN_LIMITATIONS.md` item 2; `tests/part3b_extra_tests.py::test_ttl_out_of_range_256_raises_unhandled_error`
+- **Evidence:** `KNOWN_LIMITATIONS.md` item 2; `tests/part3b_extra_tests.py::test_ttl_out_of_range_256_raises_unhandled_error`; Jira ticket KAN-5 description, `docs/evidence/part4_bug02_jira_detail.jpg`
 - **Related test case:** TC-07
 - **Status:** Open
 
@@ -46,7 +46,7 @@
 
 ## BUG-03 — Non-multicast address accepted as a multicast group target without validation
 
-- **Environment/build:** Linux, commit `bd231e1`, `agent_core` layer (`agent_core/multicast.py`, `MulticastTransport.send`)
+- **Environment/build:** Linux, commit `09403cc` (frozen application code), `agent_core` layer (`agent_core/multicast.py`, `MulticastTransport.send`)
 - **Preconditions:** none beyond a running agent
 - **Steps to reproduce:**
   1. Call `send("multicast", "10.0.0.5:7999", <payload>, ttl=1)` — `10.0.0.5` is a private unicast-range address, not in the valid multicast range (224.0.0.0–239.255.255.255)
@@ -56,7 +56,7 @@
 - **Reproducibility:** Always (100%)
 - **Severity:** Medium — does not crash the app, but allows a clearly invalid configuration to be accepted silently, which could mislead a user into believing a message was properly multicast when it was not
 - **Priority:** Medium — a straightforward input-validation fix (range-check the address against 224.0.0.0/4), not urgent but worth fixing before any real deployment
-- **Evidence:** `KNOWN_LIMITATIONS.md` item 2; `tests/part3b_extra_tests.py::test_non_multicast_address_not_rejected`
+- **Evidence:** `KNOWN_LIMITATIONS.md` item 2; `tests/part3b_extra_tests.py::test_non_multicast_address_not_rejected`; Jira ticket KAN-6 description, `docs/evidence/part4_bug03_jira_detail.jpg`
 - **Related test case:** TC-08
 - **Status:** Open
 
@@ -64,7 +64,7 @@
 
 ## BUG-04 — Sending with a blank Target field crashes with an unhandled ValueError
 
-- **Environment/build:** Windows 10, commit `bd231e1` (as observed), GUI layer (`agent_gui/send_panel.py` → `agent_core/router.py`, `target.partition(":")` / `int(port)`)
+- **Environment/build:** Windows 10, commit `09403cc` (frozen application code), GUI layer (`agent_gui/send_panel.py` → `agent_core/router.py`, `target.partition(":")` / `int(port)`)
 - **Preconditions:** App running, at least 2 agent windows open
 - **Steps to reproduce:**
   1. In any agent window's Send panel, leave the "Target (addr:port)" field blank
@@ -74,7 +74,7 @@
 - **Reproducibility:** Always (100% — any send attempt with an empty Target field)
 - **Severity:** Medium — does not crash the whole app (caught at the `AgentNode.send()` level and surfaced as an error Event rather than terminating the process), but produces a confusing, implementation-leaking error message for an extremely easy user mistake (forgetting to fill in the Target field)
 - **Priority:** Medium — easy to trigger accidentally, easy to fix with a simple non-empty check before parsing
-- **Evidence:** `docs/evidence/part3b_tc15_mode_routing.png` (shows the three raw `ValueError` lines)
+- **Evidence:** `docs/evidence/part3b_tc15_mode_routing.png` (shows the three raw `ValueError` lines); Jira ticket KAN-7 description, `docs/evidence/part4_bug04_jira_detail.jpg`
 - **Related test case:** TC-15 (observed as a side effect, not the test's primary objective)
 - **Status:** Open
 
